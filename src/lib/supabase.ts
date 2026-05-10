@@ -14,7 +14,15 @@ export function getSupabase() {
     return createClient("https://dummy.supabase.co", "dummy-key");
   }
 
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    },
+  });
+
   return supabaseInstance;
 }
 

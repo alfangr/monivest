@@ -51,7 +51,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           .single();
 
         if (error) {
-          console.error("Error fetching user data:", error);
+          console.error("[AuthProvider] Error fetching user data:", error);
           setChecking(false);
           return;
         }

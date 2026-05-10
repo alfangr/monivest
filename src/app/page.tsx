@@ -8,7 +8,6 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useAuthListener } from "@/hooks/useAuthListener";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,7 +35,6 @@ const itemVariants = {
 export default function Home() {
   const router = useRouter();
   const { signInWithGoogle, user } = useAuthStore();
-  const loading = useAuthListener();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>("");
 
@@ -46,16 +44,12 @@ export default function Home() {
     }
   }, [user, router]);
 
-  if (loading) {
+  if (user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-gray-200 border-t-gray-900"></div>
       </div>
     );
-  }
-
-  if (user) {
-    return null;
   }
 
   const handleGoogleSignIn = async () => {
