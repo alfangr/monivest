@@ -1,0 +1,9 @@
+{
+  "name": "MoniVest",
+  "short_name": "MoniVest",
+  "description": "Satu dashboard untuk semua investasi Anda.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#171717"
+}
