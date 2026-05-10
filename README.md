@@ -1,15 +1,16 @@
-# Monivest
+# MoniVest
 
-Aplikasi manajemen investasi pribadi dengan enkripsi end-to-end.
+Aplikasi manajemen investasi pribadi dengan enkripsi end-to-end dan PWA support.
 
 ## Fitur
 
-- **Dashboard**: Ringkasan portofolio investasi
+- **Dashboard**: Ringkasan portofolio investasi dengan chart dan statistik
 - **Investasi**: Kelola semua investasi (tambah, edit, hapus)
-- **Kategori**: Manage kategori investasi secara dinamis per user
+- **Kategori**: Manage kategori investasi secara dinamis per user (default: Saham, Reksa Dana, Crypto)
 - **Pengaturan**: Pengaturan akun dan aplikasi
 - **Enkripsi End-to-End**: Semua data investasi dienkripsi di sisi client
 - **Auth**: Login dengan Google dan Email
+- **PWA**: Dapat diinstall sebagai aplikasi standalone di mobile dan desktop
 
 ## Teknologi
 
@@ -19,6 +20,7 @@ Aplikasi manajemen investasi pribadi dengan enkripsi end-to-end.
 - **Tailwind CSS**: Styling
 - **Framer Motion**: Animasi
 - **Lucide React**: Ikon
+- **PWA**: Manifest dan icons untuk installable app
 
 ## Memulai
 
@@ -67,4 +69,7 @@ src/
 ├── lib/              # Utilities & constants
 ├── stores/           # Zustand stores
 └── types/            # TypeScript types
+public/
+├── icons/            # PWA icons
+└── screenshots/      # PWA screenshots
 ```
