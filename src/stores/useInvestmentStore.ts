@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import { encryptNumber, decryptNumber, encrypt, decrypt } from "@/lib/crypto";
+import { calculateAutoValue } from "@/lib/utils";
 import { useCryptoStore } from "@/stores/useCryptoStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { Investment, InvestmentInsert, InvestmentUpdate, EncryptedInvestment, EncryptedInvestmentInsert } from "@/types";
@@ -12,6 +13,7 @@ interface InvestmentState {
   addInvestment: (investment: InvestmentInsert) => Promise<void>;
   updateInvestment: (id: string, investment: InvestmentUpdate) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
+  getCalculatedValue: (investment: Investment) => number;
 }
 
 async function encryptInvestment(investment: InvestmentInsert, key: Uint8Array): Promise<EncryptedInvestmentInsert> {
@@ -45,6 +47,9 @@ async function decryptInvestment(encrypted: Record<string, any>, key: Uint8Array
       ? await decryptNumber(encrypted.monthly_return, key) 
       : null,
     notes: decryptedNotes,
+    auto_calculate: encrypted.auto_calculate ?? false,
+    return_type: encrypted.return_type ?? "annual",
+    tax_rate: encrypted.tax_rate ?? 20,
   };
 }
 
@@ -114,6 +119,9 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => {
       if (investment.category !== undefined) updateData.category = investment.category;
       if (investment.platform !== undefined) updateData.platform = investment.platform;
       if (investment.start_date !== undefined) updateData.start_date = investment.start_date;
+      if (investment.auto_calculate !== undefined) updateData.auto_calculate = investment.auto_calculate;
+      if (investment.return_type !== undefined) updateData.return_type = investment.return_type;
+      if (investment.tax_rate !== undefined) updateData.tax_rate = investment.tax_rate;
       
       if (investment.initial_amount !== undefined) {
         updateData.initial_amount = await encryptNumber(investment.initial_amount, encryptionKey);
@@ -155,6 +163,18 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => {
       set((state) => ({
         investments: state.investments.filter((inv) => inv.id !== id),
       }));
+    },
+    getCalculatedValue: (investment: Investment): number => {
+      if (!investment.auto_calculate || !investment.monthly_return) {
+        return investment.current_value;
+      }
+      return calculateAutoValue(
+        investment.initial_amount,
+        investment.monthly_return,
+        investment.start_date,
+        investment.return_type || "annual",
+        investment.tax_rate ?? 20
+      );
     },
   };
 });

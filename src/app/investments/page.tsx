@@ -43,7 +43,7 @@ const itemVariants = {
 
 export default function InvestmentsPage() {
   const user = useAuthStore((state) => state.user);
-  const { investments, loading, fetchInvestments, deleteInvestment } = useInvestmentStore();
+  const { investments, loading, fetchInvestments, deleteInvestment, getCalculatedValue } = useInvestmentStore();
   const { categories, fetchCategories } = useCategoryStore();
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -197,7 +197,8 @@ export default function InvestmentsPage() {
               className="grid gap-4"
             >
               {filteredInvestments.map((investment) => {
-                const profit = investment.current_value - investment.initial_amount;
+                const calculatedValue = getCalculatedValue(investment);
+                const profit = calculatedValue - investment.initial_amount;
                 const profitPercentage =
                   investment.initial_amount > 0
                     ? (profit / investment.initial_amount) * 100
@@ -219,6 +220,9 @@ export default function InvestmentsPage() {
                               <span className="px-2 py-1 bg-gray-100 rounded-full text-xs font-medium text-gray-900">
                                 {investment.category}
                               </span>
+                              {investment.auto_calculate && (
+                                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Auto Calculate</span>
+                              )}
                             </div>
                             {investment.notes && (
                               <p className="text-sm text-gray-500 mb-2">
@@ -233,7 +237,7 @@ export default function InvestmentsPage() {
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold text-gray-900">
-                              {formatCurrency(investment.current_value)}
+                              {formatCurrency(calculatedValue)}
                             </p>
                             <div
                               className={`flex items-center justify-end gap-1 text-sm font-medium ${

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -20,6 +20,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useInvestmentStore } from "@/stores/useInvestmentStore";
 import { useCategoryStore } from "@/stores/useCategoryStore";
+import { calculateAutoValue } from "@/lib/utils";
 import { X } from "lucide-react";
 import type { Database } from "@/types/supabase";
 
@@ -27,11 +28,30 @@ const investmentSchema = z.object({
   name: z.string().min(1, "Nama investasi harus diisi"),
   category: z.string().min(1, "Kategori harus dipilih"),
   initial_amount: z.string().min(1, "Modal awal harus diisi"),
-  current_value: z.string().min(1, "Nilai saat ini harus diisi"),
+  current_value: z.string().optional(),
   start_date: z.string().min(1, "Tanggal mulai harus diisi"),
   platform: z.string().optional(),
   monthly_return: z.string().optional(),
+  return_type: z.enum(["monthly", "annual"]).optional(),
+  auto_calculate: z.boolean().optional(),
+  tax_rate: z.string().optional(),
   notes: z.string().optional(),
+}).refine((data) => {
+  if (data.auto_calculate) {
+    return data.monthly_return && data.monthly_return.length > 0;
+  }
+  return true;
+}, {
+  message: "Return harus diisi jika menggunakan auto calculate",
+  path: ["monthly_return"],
+}).refine((data) => {
+  if (!data.auto_calculate) {
+    return data.current_value && data.current_value.length > 0;
+  }
+  return true;
+}, {
+  message: "Nilai saat ini harus diisi",
+  path: ["current_value"],
 });
 
 type InvestmentFormValues = z.infer<typeof investmentSchema>;
@@ -95,10 +115,16 @@ export default function InvestmentModal({
           start_date: investment.start_date,
           platform: investment.platform || "",
           monthly_return: investment.monthly_return?.toString() || "",
+          return_type: (investment as any).return_type || "annual",
+          auto_calculate: (investment as any).auto_calculate || false,
+          tax_rate: (investment as any).tax_rate?.toString() || "20",
           notes: investment.notes || "",
         }
       : {
           start_date: new Date().toISOString().split("T")[0],
+          return_type: "annual",
+          auto_calculate: false,
+          tax_rate: "20",
         },
   });
 
@@ -106,13 +132,32 @@ export default function InvestmentModal({
     return null;
   }
 
+  const watchAutoCalculate = watch("auto_calculate");
+  const watchReturnType = watch("return_type");
+
   const onSubmit = async (data: InvestmentFormValues) => {
     setIsLoading(true);
     setError("");
     try {
       const initialAmount = parseFloat(data.initial_amount.replace(/[^0-9]/g, ""));
-      const currentValue = parseFloat(data.current_value.replace(/[^0-9]/g, ""));
       const monthlyReturn = data.monthly_return ? parseFloat(data.monthly_return) : null;
+      const taxRate = data.tax_rate ? parseFloat(data.tax_rate) : 20;
+
+      let currentValue: number;
+      if (data.auto_calculate && monthlyReturn && !isNaN(monthlyReturn)) {
+        currentValue = calculateAutoValue(
+          initialAmount,
+          monthlyReturn,
+          data.start_date,
+          data.return_type || "annual",
+          taxRate
+        );
+      } else {
+        if (!data.current_value) {
+          throw new Error("Nilai saat ini harus diisi");
+        }
+        currentValue = parseFloat(data.current_value.replace(/[^0-9]/g, ""));
+      }
 
       if (isNaN(initialAmount) || initialAmount <= 0) {
         throw new Error("Modal awal harus lebih dari 0");
@@ -120,16 +165,22 @@ export default function InvestmentModal({
       if (isNaN(currentValue) || currentValue <= 0) {
         throw new Error("Nilai saat ini harus lebih dari 0");
       }
+      if (data.auto_calculate && (!monthlyReturn || isNaN(monthlyReturn))) {
+        throw new Error("Return harus diisi jika menggunakan auto calculate");
+      }
 
       if (isEdit) {
         await updateInvestment(investment.id, {
           name: data.name,
           category: data.category,
           initial_amount: initialAmount,
-          current_value: currentValue,
+          current_value: Math.round(currentValue),
           start_date: data.start_date,
           platform: data.platform || null,
           monthly_return: monthlyReturn,
+          auto_calculate: data.auto_calculate || false,
+          return_type: data.return_type || "annual",
+          tax_rate: taxRate,
           notes: data.notes || null,
         });
       } else {
@@ -138,10 +189,13 @@ export default function InvestmentModal({
           name: data.name,
           category: data.category,
           initial_amount: initialAmount,
-          current_value: currentValue,
+          current_value: Math.round(currentValue),
           start_date: data.start_date,
           platform: data.platform || null,
           monthly_return: monthlyReturn,
+          auto_calculate: data.auto_calculate || false,
+          return_type: data.return_type || "annual",
+          tax_rate: taxRate,
           notes: data.notes || null,
         });
       }
@@ -165,6 +219,28 @@ export default function InvestmentModal({
 
   const watchInitialAmount = watch("initial_amount");
   const watchCurrentValue = watch("current_value");
+  const watchStartDate = watch("start_date");
+  const watchMonthlyReturn = watch("monthly_return");
+  const watchTaxRate = watch("tax_rate");
+
+  useEffect(() => {
+    if (watchAutoCalculate && watchInitialAmount && watchStartDate && watchMonthlyReturn && watchTaxRate) {
+      const initialAmount = parseFloat(watchInitialAmount.replace(/[^0-9]/g, ""));
+      const monthlyReturn = parseFloat(watchMonthlyReturn);
+      const taxRate = parseFloat(watchTaxRate);
+      
+      if (!isNaN(initialAmount) && !isNaN(monthlyReturn) && !isNaN(taxRate) && initialAmount > 0) {
+        const calculatedValue = calculateAutoValue(
+          initialAmount,
+          monthlyReturn,
+          watchStartDate,
+          watchReturnType || "annual",
+          taxRate
+        );
+        setValue("current_value", Math.round(calculatedValue).toString());
+      }
+    }
+  }, [watchAutoCalculate, watchInitialAmount, watchStartDate, watchMonthlyReturn, watchReturnType, watchTaxRate, setValue]);
 
   return (
     <motion.div
@@ -226,7 +302,7 @@ export default function InvestmentModal({
                   <Label htmlFor="category" className="text-gray-900">Kategori *</Label>
                   <Select
                     onValueChange={(value) => setValue("category", value)}
-                    defaultValue={isEdit ? investment.category : undefined}
+                    value={watch("category")}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih kategori" />
@@ -269,10 +345,15 @@ export default function InvestmentModal({
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="current_value" className="text-gray-900">Nilai Saat Ini (Rp) *</Label>
+                  <Label htmlFor="current_value" className="text-gray-900">
+                    Nilai Saat Ini (Rp) *
+                    {watchAutoCalculate && <span className="text-blue-600 text-sm ml-2">(Auto Calculate)</span>}
+                  </Label>
                   <Input
                     id="current_value"
                     placeholder="0"
+                    readOnly={watchAutoCalculate}
+                    className={watchAutoCalculate ? "bg-gray-50" : ""}
                     value={
                       watchCurrentValue
                         ? formatNumberInput(watchCurrentValue.toString())
@@ -285,25 +366,68 @@ export default function InvestmentModal({
                   )}
                 </div>
               </motion.div>
-              <motion.div variants={itemVariants} className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="platform" className="text-gray-900">Platform (Opsional)</Label>
-                  <Input
-                    id="platform"
-                    placeholder="Contoh: BCA Sekuritas, Binance"
-                    {...register("platform")}
+              <motion.div variants={itemVariants} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="auto_calculate"
+                    checked={watchAutoCalculate}
+                    onChange={(e) => setValue("auto_calculate", e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                   />
+                  <Label htmlFor="auto_calculate" className="text-gray-900 font-medium cursor-pointer">
+                    Hitung otomatis nilai investasi
+                  </Label>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="monthly_return" className="text-gray-900">Return Bulanan (%) (Opsional)</Label>
-                  <Input
-                    id="monthly_return"
-                    type="number"
-                    step="0.01"
-                    placeholder="0"
-                    {...register("monthly_return")}
-                  />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="platform" className="text-gray-900">Platform (Opsional)</Label>
+                    <Input
+                      id="platform"
+                      placeholder="Contoh: BCA Sekuritas, Binance"
+                      {...register("platform")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="monthly_return" className="text-gray-900">Return (%) *</Label>
+                    <Input
+                      id="monthly_return"
+                      type="number"
+                      step="0.01"
+                      placeholder="7.5"
+                      {...register("monthly_return")}
+                    />
+                  </div>
                 </div>
+                {watchAutoCalculate && (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="return_type" className="text-gray-900">Tipe Return</Label>
+                      <Select
+                        onValueChange={(value) => setValue("return_type", value as "monthly" | "annual")}
+                        value={watchReturnType}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih tipe return" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="annual">Tahunan</SelectItem>
+                          <SelectItem value="monthly">Bulanan</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tax_rate" className="text-gray-900">Pajak (%)</Label>
+                      <Input
+                        id="tax_rate"
+                        type="number"
+                        step="0.01"
+                        placeholder="20"
+                        {...register("tax_rate")}
+                      />
+                    </div>
+                  </div>
+                )}
               </motion.div>
               <motion.div variants={itemVariants} className="space-y-2">
                 <Label htmlFor="notes" className="text-gray-900">Catatan (Opsional)</Label>

@@ -12,11 +12,25 @@ export type UserUpdate = Database["public"]["Tables"]["users"]["Update"] & {
   encryption_salt?: string | null;
 };
 
-export type Investment = Database["public"]["Tables"]["investments"]["Row"];
+export type ReturnType = "monthly" | "annual";
 
-export type InvestmentInsert = Database["public"]["Tables"]["investments"]["Insert"];
+export type Investment = Database["public"]["Tables"]["investments"]["Row"] & {
+  auto_calculate?: boolean | null;
+  return_type?: ReturnType | null;
+  tax_rate?: number | null;
+};
 
-export type InvestmentUpdate = Database["public"]["Tables"]["investments"]["Update"];
+export type InvestmentInsert = Database["public"]["Tables"]["investments"]["Insert"] & {
+  auto_calculate?: boolean | null;
+  return_type?: ReturnType | null;
+  tax_rate?: number | null;
+};
+
+export type InvestmentUpdate = Database["public"]["Tables"]["investments"]["Update"] & {
+  auto_calculate?: boolean | null;
+  return_type?: ReturnType | null;
+  tax_rate?: number | null;
+};
 
 export type Category = {
   id: string;

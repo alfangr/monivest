@@ -43,7 +43,7 @@ const itemVariants = {
 
 export default function DashboardPage() {
   const user = useAuthStore((state) => state.user);
-  const { investments, loading, fetchInvestments } = useInvestmentStore();
+  const { investments, loading, fetchInvestments, getCalculatedValue } = useInvestmentStore();
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
@@ -52,17 +52,18 @@ export default function DashboardPage() {
     }
   }, [user, fetchInvestments]);
 
-  const totalValue = investments.reduce((sum, inv) => sum + inv.current_value, 0);
+  const totalValue = investments.reduce((sum, inv) => sum + getCalculatedValue(inv), 0);
   const totalInitial = investments.reduce((sum, inv) => sum + inv.initial_amount, 0);
   const totalProfit = totalValue - totalInitial;
   const roi = totalInitial > 0 ? (totalProfit / totalInitial) * 100 : 0;
 
   const categoryData = investments.reduce((acc, inv) => {
     const existing = acc.find((item) => item.name === inv.category);
+    const calculatedValue = getCalculatedValue(inv);
     if (existing) {
-      existing.value += inv.current_value;
+      existing.value += calculatedValue;
     } else {
-      acc.push({ name: inv.category, value: inv.current_value });
+      acc.push({ name: inv.category, value: calculatedValue });
     }
     return acc;
   }, [] as { name: string; value: number }[]);
@@ -310,7 +311,8 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {investments.slice(0, 5).map((investment, index) => {
-                    const profit = investment.current_value - investment.initial_amount;
+                    const calculatedValue = getCalculatedValue(investment);
+                    const profit = calculatedValue - investment.initial_amount;
                     const profitPercentage = investment.initial_amount > 0 
                       ? (profit / investment.initial_amount) * 100 
                       : 0;
@@ -324,13 +326,18 @@ export default function DashboardPage() {
                         className="flex items-center justify-between p-5 rounded-xl border border-gray-200 bg-white hover:shadow-md hover:-translate-y-1 transition-all duration-300"
                       >
                         <div className="flex-1">
-                          <p className="font-semibold text-lg text-gray-900">{investment.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-lg text-gray-900">{investment.name}</p>
+                            {investment.auto_calculate && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">Auto</span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500 mt-1">
                             {investment.category}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-lg text-gray-900">{formatCurrency(investment.current_value)}</p>
+                          <p className="font-semibold text-lg text-gray-900">{formatCurrency(calculatedValue)}</p>
                           <p className={`text-sm font-medium mt-1 ${
                             profit >= 0 ? "text-green-600" : "text-red-600"
                           }`}>
