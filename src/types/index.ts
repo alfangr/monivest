@@ -2,14 +2,17 @@ import type { Database } from "./supabase";
 
 export type User = Database["public"]["Tables"]["users"]["Row"] & {
   encryption_salt?: string | null;
+  role?: string;
 };
 
 export type UserInsert = Database["public"]["Tables"]["users"]["Insert"] & {
   encryption_salt?: string | null;
+  role?: string;
 };
 
 export type UserUpdate = Database["public"]["Tables"]["users"]["Update"] & {
   encryption_salt?: string | null;
+  role?: string;
 };
 
 export type ReturnType = "monthly" | "annual";

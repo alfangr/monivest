@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useUserStore } from "@/stores/useUserStore";
+import type { User } from "@/types";
 import {
   Home,
   TrendingUp,
@@ -15,13 +17,26 @@ import {
   LogOut,
   Tag,
   History,
+  Users,
 } from "lucide-react";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { signOut } = useAuthStore();
+  const { signOut, user: authUser } = useAuthStore();
+  const { fetchUser } = useUserStore();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+
+  useEffect(() => {
+    if (authUser) {
+      fetchUser(authUser.id).then((user) => {
+        setCurrentUser(user);
+      });
+    }
+  }, [authUser, fetchUser]);
+
+  const isAdmin = currentUser?.role === "admin";
 
   const navItems = [
     {
@@ -39,17 +54,22 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       label: "Kategori",
       icon: Tag,
     },
-    {
+    isAdmin && {
       href: "/activity-logs",
       label: "Riwayat",
       icon: History,
+    },
+    isAdmin && {
+      href: "/users",
+      label: "Pengguna",
+      icon: Users,
     },
     {
       href: "/settings",
       label: "Pengaturan",
       icon: Settings,
     },
-  ];
+  ].filter(Boolean) as Array<{ href: string; label: string; icon: React.ElementType }>;
 
   const handleSignOut = async () => {
     try {

@@ -3,7 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useMemo } from "react";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminProtectedRoute from "@/components/AdminProtectedRoute";
 import AppShell from "@/components/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -111,7 +111,7 @@ export default function ActivityLogsPage() {
   }, [logs, users, searchQuery, filterAction, filterEntity, filterUser]);
 
   return (
-    <ProtectedRoute>
+    <AdminProtectedRoute>
       <AppShell>
         <div className="max-w-4xl mx-auto">
           <Card>
@@ -196,7 +196,7 @@ export default function ActivityLogsPage() {
                         key={log.id}
                         className="flex items-start gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100"
                       >
-                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-gray-200">
+                        <div className="shrink-0 w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm border border-gray-200">
                           {getActionIcon(log.action)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -244,6 +244,6 @@ export default function ActivityLogsPage() {
           </Card>
         </div>
       </AppShell>
-    </ProtectedRoute>
+    </AdminProtectedRoute>
   );
 }

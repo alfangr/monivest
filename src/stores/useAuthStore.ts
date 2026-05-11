@@ -48,6 +48,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           id: userId,
           email,
           full_name: fullName,
+          role: "pengguna",
         });
       if (profileError) throw profileError;
 
