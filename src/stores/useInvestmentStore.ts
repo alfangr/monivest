@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import { encryptNumber, decryptNumber, encrypt, decrypt } from "@/lib/crypto";
 import { calculateAutoValue } from "@/lib/utils";
+import { logActivity } from "@/lib/activity-logger";
 import { useCryptoStore } from "@/stores/useCryptoStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { Investment, InvestmentInsert, InvestmentUpdate, EncryptedInvestment, EncryptedInvestmentInsert } from "@/types";
@@ -105,10 +106,15 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => {
       
       const decrypted = await decryptInvestment(data as EncryptedInvestment, encryptionKey);
       set((state) => ({ investments: [decrypted, ...state.investments] }));
+      
+      logActivity(investment.user_id, "create", "investment", decrypted.id, { name: investment.name });
     },
     updateInvestment: async (id: string, investment: InvestmentUpdate) => {
       const encryptionKey = useCryptoStore.getState().encryptionKey;
       if (!encryptionKey) throw new Error("Encryption key not found");
+      
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId) throw new Error("User not authenticated");
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: Record<string, any> = { 
@@ -151,8 +157,15 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => {
       set((state) => ({
         investments: state.investments.map((inv) => inv.id === id ? decrypted : inv),
       }));
+      
+      logActivity(userId, "update", "investment", id, { name: decrypted.name });
     },
     deleteInvestment: async (id: string) => {
+      const userId = useAuthStore.getState().user?.id;
+      if (!userId) throw new Error("User not authenticated");
+      
+      const investment = get().investments.find((inv) => inv.id === id);
+      
       const { error } = await supabase
         .from("investments")
         .update({ deleted_at: new Date().toISOString() })
@@ -163,6 +176,8 @@ export const useInvestmentStore = create<InvestmentState>((set, get) => {
       set((state) => ({
         investments: state.investments.filter((inv) => inv.id !== id),
       }));
+      
+      logActivity(userId, "delete", "investment", id, { name: investment?.name });
     },
     getCalculatedValue: (investment: Investment): number => {
       if (!investment.auto_calculate || !investment.monthly_return) {

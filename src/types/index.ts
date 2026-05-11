@@ -74,3 +74,11 @@ export type EncryptedInvestmentInsert = Omit<
   monthly_return: string | null;
   notes: string | null;
 };
+
+export type ActivityLog = Database["public"]["Tables"]["activity_logs"]["Row"];
+
+export type ActivityLogInsert = Database["public"]["Tables"]["activity_logs"]["Insert"];
+
+export type ActivityAction = "create" | "update" | "delete" | "login" | "logout";
+
+export type EntityType = "investment" | "category" | "user";

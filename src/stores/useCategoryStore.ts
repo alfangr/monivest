@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/activity-logger";
 import type { Category, CategoryInsert, CategoryUpdate } from "@/types";
 
 interface CategoryState {
@@ -61,6 +62,8 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
         const newCategories = [...state.categories, data as Category];
         return { categories: deduplicateCategories(newCategories) };
       });
+      
+      logActivity(category.user_id, "create", "category", data.id, { name: category.name });
     },
     updateCategory: async (id: string, category: CategoryUpdate) => {
       const updateData = { 
@@ -80,8 +83,15 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       set((state) => ({
         categories: state.categories.map((cat) => cat.id === id ? (data as Category) : cat),
       }));
+      
+      const currentCategory = get().categories.find((cat) => cat.id === id);
+      if (currentCategory) {
+        logActivity(currentCategory.user_id, "update", "category", id, { name: data.name });
+      }
     },
     deleteCategory: async (id: string) => {
+      const currentCategory = get().categories.find((cat) => cat.id === id);
+      
       const { error } = await supabase
         .from("categories")
         .delete()
@@ -92,6 +102,10 @@ export const useCategoryStore = create<CategoryState>((set, get) => {
       set((state) => ({
         categories: state.categories.filter((cat) => cat.id !== id),
       }));
+      
+      if (currentCategory) {
+        logActivity(currentCategory.user_id, "delete", "category", id, { name: currentCategory.name });
+      }
     },
   };
 });

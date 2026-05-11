@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
+import { logActivity } from "@/lib/activity-logger";
 import { DEFAULT_CATEGORIES } from "@/lib/constants";
 import { User } from "@supabase/supabase-js";
 
@@ -63,8 +64,15 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
   signOut: async () => {
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      await logActivity(currentUser.id, "logout", "user");
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("monivest_last_login_id");
+    }
     set({ user: null });
   },
   resetPassword: async (email: string) => {

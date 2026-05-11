@@ -14,6 +14,7 @@ import {
   X,
   LogOut,
   Tag,
+  History,
 } from "lucide-react";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       href: "/categories",
       label: "Kategori",
       icon: Tag,
+    },
+    {
+      href: "/activity-logs",
+      label: "Riwayat",
+      icon: History,
     },
     {
       href: "/settings",
